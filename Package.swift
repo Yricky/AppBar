@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "AppBar",
     platforms: [
-        .macOS(.v11)
+        .macOS(.v12)
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
