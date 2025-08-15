@@ -10,12 +10,16 @@ struct App : Hashable, Identifiable {
     }
     
     func name() -> String {
+        guard let bundle = Bundle(url: url) else {
+            return url.deletingPathExtension().lastPathComponent
+        }
+
         // Try to get the localized name from the app bundle
-        if let bundle = Bundle(url: url),
-           let displayName = bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String {
+        if let displayName = bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String, !displayName.isEmpty {
             return displayName
-        } else if let bundle = Bundle(url: url),
-                  let name = bundle.object(forInfoDictionaryKey: "CFBundleName") as? String {
+        }
+        
+        if let name = bundle.object(forInfoDictionaryKey: "CFBundleName") as? String, !name.isEmpty {
             return name
         }
         
@@ -37,14 +41,32 @@ struct App : Hashable, Identifiable {
 
 struct ContentView: View {
     @State private var searchText = ""
+    @FocusState private var isSearchFieldFocused: Bool
     @State private var applications: [App] = []
     
     var body: some View {
         VStack(spacing: 10) {
-            // Search field
-            TextField("Search apps...", text: $searchText)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .padding(.horizontal)
+            // Search field with icon
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.gray)
+                    .padding(.leading, 8)
+                TextField("Search apps...", text: $searchText)
+                    .focused($isSearchFieldFocused)
+                    .textFieldStyle(PlainTextFieldStyle())
+                    .background(Color.clear)
+                // Clear button when there's text
+                if !searchText.isEmpty {
+                    Button(action: {
+                        searchText = ""
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.gray)
+                            .padding(.trailing, 8)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
             
             // Applications list
             ScrollView {
@@ -97,7 +119,10 @@ struct ContentView: View {
         if searchText.isEmpty {
             return applications
         }
-        return applications.filter { $0.name().localizedCaseInsensitiveContains(searchText) }
+        return applications.filter { 
+            $0.name().localizedCaseInsensitiveContains(searchText) || 
+            $0.url.lastPathComponent.localizedCaseInsensitiveContains(searchText)
+        }
     }
     
     private func loadApplications() {
