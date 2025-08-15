@@ -1,8 +1,21 @@
 import SwiftUI
+import AppKit
+
+struct App : Hashable {
+    var url: URL
+    
+    init(url: URL) {
+        self.url = url
+    }
+    
+    func name() -> String {
+        return url.deletingPathExtension().lastPathComponent
+    }
+}
 
 struct ContentView: View {
     @State private var searchText = ""
-    @State private var applications: [String] = []
+    @State private var applications: [App] = []
     
     var body: some View {
         VStack(spacing: 10) {
@@ -10,9 +23,6 @@ struct ContentView: View {
             TextField("Search apps...", text: $searchText)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .padding(.horizontal)
-                .onChange(of: searchText) { newValue in
-                    // Filtering is handled by computed property filteredApplications
-                }
             
             // Applications list
             ScrollView {
@@ -22,9 +32,10 @@ struct ContentView: View {
                             openApplication(app)
                         }) {
                             HStack {
-                                Image(systemName: "app.badge")
-                                    .foregroundColor(.blue)
-                                Text(app)
+                                Image(nsImage: getAppIcon(for: app))
+                                    .resizable()
+                                    .frame(width: 16, height: 16)
+                                Text(app.name())
                                 Spacer()
                             }
                             .padding(.horizontal)
@@ -33,7 +44,6 @@ struct ContentView: View {
                         .buttonStyle(PlainButtonStyle())
                     }
                 }
-                .padding(.vertical)
             }
             
             // Quit button
@@ -44,9 +54,6 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity)
                     .padding()
             }
-            .buttonStyle(.borderedProminent)
-            .padding(.horizontal)
-            .padding(.bottom, 5)
         }
         .frame(width: 250, height: 500)
         .onAppear {
@@ -54,57 +61,52 @@ struct ContentView: View {
         }
     }
     
-    private var filteredApplications: [String] {
+    private var filteredApplications: [App] {
         if searchText.isEmpty {
             return applications
         }
-        return applications.filter { $0.localizedCaseInsensitiveContains(searchText) }
+        return applications.filter { $0.name().localizedCaseInsensitiveContains(searchText) }
     }
     
     private func loadApplications() {
         let appPaths = [
             "/Applications",
+            "/System/Applications",
             NSHomeDirectory() + "/Applications"
         ]
         
-        var apps: [String] = []
+        var apps: [App] = []
         
         for path in appPaths {
             let url = URL(fileURLWithPath: path)
             if let contents = try? FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil) {
-                let appNames = contents.compactMap { fileURL -> String? in
+                contents.forEach { fileURL in
                     if fileURL.pathExtension == "app" {
-                        return fileURL.deletingPathExtension().lastPathComponent
+                        print("\(fileURL)")
+                        apps.append(App(url: fileURL))
                     }
-                    return nil
                 }
-                apps.append(contentsOf: appNames)
+                
+                
             }
         }
         
         // Remove duplicates while preserving order
-        var seen = Set<String>()
-        applications = apps.filter { seen.insert($0).inserted }
+        var seen = Set<URL>()
+        applications = apps.filter { seen.insert($0.url).inserted }
+    }    
+
+    private func openApplication(_ app: App) {
+        NSWorkspace.shared.open(app.url)
     }
     
-    private func filterApplications() {
-        // Filtering is handled by computed property filteredApplications
-        // This method is kept for compatibility with the onChange modifier
-    }
-    
-    private func openApplication(_ appName: String) {
-        let appPaths = [
-            "/Applications/\(appName).app",
-            NSHomeDirectory() + "/Applications/\(appName).app"
-        ]
-        
-        for path in appPaths {
-            let url = URL(fileURLWithPath: path)
-            if FileManager.default.fileExists(atPath: url.path) {
-                NSWorkspace.shared.open(url)
-                break
-            }
+    private func getAppIcon(for app: App) -> NSImage {
+        if FileManager.default.fileExists(atPath: app.url.path) {
+            return NSWorkspace.shared.icon(forFile: app.url.path)
         }
+        
+        // Return a default icon if the app icon is not found
+        return NSImage(systemSymbolName: "app.badge", accessibilityDescription: nil) ?? NSImage()
     }
 }
 
