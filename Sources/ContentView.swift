@@ -10,6 +10,16 @@ struct App : Hashable, Identifiable {
     }
     
     func name() -> String {
+        // Try to get the localized name from the app bundle
+        if let bundle = Bundle(url: url),
+           let displayName = bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String {
+            return displayName
+        } else if let bundle = Bundle(url: url),
+                  let name = bundle.object(forInfoDictionaryKey: "CFBundleName") as? String {
+            return name
+        }
+        
+        // Fallback to the file name without extension
         return url.deletingPathExtension().lastPathComponent
     }
     
@@ -58,8 +68,7 @@ struct ContentView: View {
             }) {
                 Text("Quit")
                     .frame(maxWidth: .infinity)
-                    .padding()
-            }
+            }.padding(.horizontal)
         }
         .frame(width: 250, height: 500)
         .onAppear {
@@ -75,7 +84,7 @@ struct ContentView: View {
             Image(nsImage: image)
                 .resizable()
                 .frame(width: 16, height: 16)
-                .padding(.horizontal)
+                .padding(.leading)
                 .onAppear {
                     Task { @MainActor in
                         image = await app.loadIcon()
