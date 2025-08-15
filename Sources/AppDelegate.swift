@@ -25,15 +25,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func getApplications() -> [String] {
-        let applicationDirectory = FileManager.default.urls(for: .applicationDirectory, in: .localDomainMask).first!
-        let contents = try? FileManager.default.contentsOfDirectory(at: applicationDirectory, includingPropertiesForKeys: nil)
+        var applications: [String] = []
         
-        return contents?.compactMap { url in
-            if url.pathExtension == "app" {
-                return url.deletingPathExtension().lastPathComponent
-            }
-            return nil
-        } ?? []
+        // Get applications from both local and user application directories
+        let applicationDirectories = [
+            FileManager.default.urls(for: .applicationDirectory, in: .localDomainMask),
+            FileManager.default.urls(for: .applicationDirectory, in: .userDomainMask)
+        ].flatMap{ c in
+            c
+        }
+        
+                
+        for applicationDirectory in applicationDirectories {
+            let contents = try? FileManager.default.contentsOfDirectory(at: applicationDirectory, includingPropertiesForKeys: nil)
+            
+            let apps: [String] = contents?.compactMap { url in
+                if url.pathExtension == "app" {
+                    return url.deletingPathExtension().lastPathComponent
+                }
+                return nil
+            } ?? []
+            
+            applications.append(contentsOf: apps)
+        }
+        
+        // Remove duplicates while preserving order
+        var seen = Set<String>()
+        return applications.filter { seen.insert($0).inserted }
     }
     
     func getApplicationURL(for appName: String) -> URL? {
@@ -69,6 +87,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         searchField.placeholderString = "Search apps..."
         searchField.target = self
         searchField.action = #selector(searchFieldChanged)
+        searchField.sendsSearchStringImmediately = true
         searchItem.view = searchField
         menu.addItem(searchItem)
         
