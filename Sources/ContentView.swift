@@ -1,7 +1,8 @@
 import SwiftUI
 import AppKit
 
-struct App : Hashable {
+struct App : Hashable, Identifiable {
+    let id = UUID()
     var url: URL
     
     init(url: URL) {
@@ -10,6 +11,17 @@ struct App : Hashable {
     
     func name() -> String {
         return url.deletingPathExtension().lastPathComponent
+    }
+    
+    @MainActor
+    func loadIcon() async -> NSImage {
+        // Move the icon loading logic here
+        if FileManager.default.fileExists(atPath: self.url.path) {
+            return NSWorkspace.shared.icon(forFile: self.url.path)
+        }
+        
+        // Return a default icon if the app icon is not found
+        return NSImage(systemSymbolName: "app.badge", accessibilityDescription: nil) ?? NSImage()
     }
 }
 
@@ -27,19 +39,13 @@ struct ContentView: View {
             // Applications list
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 5) {
-                    ForEach(filteredApplications, id: \.self) { app in
+                    ForEach(filteredApplications) { app in
                         Button(action: {
                             openApplication(app)
                         }) {
-                            HStack {
-                                Image(nsImage: getAppIcon(for: app))
-                                    .resizable()
-                                    .frame(width: 16, height: 16)
-                                Text(app.name())
-                                Spacer()
-                            }
-                            .padding(.horizontal)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                            AppIconView(app: app)
+                            Text(app.name())
+                            Spacer()
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
@@ -61,6 +67,23 @@ struct ContentView: View {
         }
     }
     
+    struct AppIconView: View {
+        let app: App
+        @State private var image: NSImage = NSImage(systemSymbolName: "app.badge", accessibilityDescription: nil) ?? NSImage()
+        
+        var body: some View {
+            Image(nsImage: image)
+                .resizable()
+                .frame(width: 16, height: 16)
+                .padding(.horizontal)
+                .onAppear {
+                    Task { @MainActor in
+                        image = await app.loadIcon()
+                    }
+                }
+        }
+    }
+    
     private var filteredApplications: [App] {
         if searchText.isEmpty {
             return applications
@@ -79,34 +102,31 @@ struct ContentView: View {
         
         for path in appPaths {
             let url = URL(fileURLWithPath: path)
-            if let contents = try? FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil) {
-                contents.forEach { fileURL in
-                    if fileURL.pathExtension == "app" {
-                        print("\(fileURL)")
-                        apps.append(App(url: fileURL))
-                    }
-                }
-                
-                
-            }
+            recursivelyFindApps(at: url, apps: &apps)
         }
         
         // Remove duplicates while preserving order
         var seen = Set<URL>()
         applications = apps.filter { seen.insert($0.url).inserted }
-    }    
+    }
+    
+    private func recursivelyFindApps(at url: URL, apps: inout [App]) {
+        guard let contents = try? FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil) else { return }
+        
+        for fileURL in contents {
+            if fileURL.pathExtension == "app" {
+                print("\(fileURL)")
+                apps.append(App(url: fileURL))
+            } else if fileURL.hasDirectoryPath {
+                // Recursively search in directories that don't have .app extension
+                recursivelyFindApps(at: fileURL, apps: &apps)
+            }
+        }
+    }
+    
 
     private func openApplication(_ app: App) {
         NSWorkspace.shared.open(app.url)
-    }
-    
-    private func getAppIcon(for app: App) -> NSImage {
-        if FileManager.default.fileExists(atPath: app.url.path) {
-            return NSWorkspace.shared.icon(forFile: app.url.path)
-        }
-        
-        // Return a default icon if the app icon is not found
-        return NSImage(systemSymbolName: "app.badge", accessibilityDescription: nil) ?? NSImage()
     }
 }
 
