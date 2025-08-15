@@ -53,6 +53,11 @@ struct ContentView: View {
                     .padding(.leading, 8)
                 TextField("Search apps...", text: $searchText)
                     .focused($isSearchFieldFocused)
+                    .onSubmit {
+                        if !filteredApplications.isEmpty {
+                            openApplication(filteredApplications[0])
+                        }
+                    }
                 // Clear button when there's text
                 if !searchText.isEmpty {
                     Button(action: {
