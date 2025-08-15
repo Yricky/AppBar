@@ -1,0 +1,31 @@
+name: Build DMG
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Swift
+      uses: swift-actions/setup-swift@v1
+      with:
+        swift-version: "5.9"
+
+    - name: Make build script executable
+      run: chmod +x build_dmg.sh
+
+    - name: Build DMG
+      run: ./build_dmg.sh
+
+    - name: Upload DMG artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: AppBar.dmg
+        path: AppBar.dmg
