@@ -53,7 +53,6 @@ struct ContentView: View {
                     .padding(.leading, 8)
                 TextField("Search apps...", text: $searchText)
                     .focused($isSearchFieldFocused)
-                    .textFieldStyle(PlainTextFieldStyle())
                     .background(Color.clear)
                 // Clear button when there's text
                 if !searchText.isEmpty {

@@ -14,21 +14,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             button.action = #selector(statusBarButtonClicked)
             button.target = self
         }
-        
-        // Populate the menu with applications and ensure search box is displayed
-        populateMenu()
-    }
-    
-    @objc func statusBarButtonClicked() {
-        // Toggle menu visibility
-        statusItem?.menu?.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
-    }
-    
-    @MainActor func populateMenu() {
-        populateMenu(withFilter: "")
-    }
-    
-    @MainActor func populateMenu(withFilter filter: String = "") {
         let menu = NSMenu()
         
         // Create a hosting controller for the SwiftUI view
@@ -40,7 +25,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let menuItem = NSMenuItem()
         menuItem.view = hostingController.view
         
-        menu.addItem(menuItem)        
+        menu.addItem(menuItem)
         statusItem?.menu = menu
+    }
+    
+    @objc func statusBarButtonClicked() {
+        // Toggle menu visibility
+        statusItem?.menu?.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
     }
 }
