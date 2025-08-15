@@ -45,7 +45,7 @@ struct ContentView: View {
     @State private var applications: [App] = []
     
     var body: some View {
-        VStack(spacing: 10) {
+        VStack() {
             // Search field with icon
             HStack {
                 Image(systemName: "magnifyingglass")
@@ -53,7 +53,6 @@ struct ContentView: View {
                     .padding(.leading, 8)
                 TextField("Search apps...", text: $searchText)
                     .focused($isSearchFieldFocused)
-                    .background(Color.clear)
                 // Clear button when there's text
                 if !searchText.isEmpty {
                     Button(action: {
@@ -61,11 +60,10 @@ struct ContentView: View {
                     }) {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundColor(.gray)
-                            .padding(.trailing, 8)
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
-            }
+            }.padding(.trailing, 8)
             
             // Applications list
             ScrollView {

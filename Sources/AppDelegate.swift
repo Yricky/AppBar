@@ -20,6 +20,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let contentView = ContentView()
         let hostingController = NSHostingController(rootView: contentView)
         hostingController.view.frame = NSRect(x: 0, y: 0, width: 250, height: 500)
+        hostingController.view.wantsLayer = true
+        hostingController.view.layer?.isOpaque = false
         
         // Create a menu item to hold the SwiftUI view
         let menuItem = NSMenuItem()
